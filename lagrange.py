@@ -1,5 +1,3 @@
-import math
-
 from matplotlib import pyplot
 
 
@@ -22,14 +20,13 @@ def interpolation_function(points):
     return f
 
 
-def interpolate_with_lagrange(k: int, path: str, save: bool = False, log_scale: bool = True):
+def interpolate_with_lagrange(points: int, path: str, save: bool = False, plot_function: bool = True):
     with open(path, 'r') as f:
         data = f.readlines()
 
-    # create data for function
-    interpolation_data = [(float(x), float(y)) for x, y in (line.split() for line in data[1::k])]
+    interpolation_indices = range(0, len(data), len(data) // points + 1)
+    interpolation_data = [(float(data[i].split()[0]), float(data[i].split()[1])) for i in interpolation_indices]
 
-    # use data to create interpolating function F
     f = interpolation_function(interpolation_data)
 
     distance = [float(x) for x, _ in (line.split() for line in data)]
@@ -39,27 +36,19 @@ def interpolate_with_lagrange(k: int, path: str, save: bool = False, log_scale: 
     train_distance = [x for x, _ in interpolation_data]
     train_height = [f(x) for x in train_distance]
 
-    # odkomentowanie poniższych funkcji pozwoli na wyświetlenie fragmentów aproksymacji bez oscylacji
-    #
-    n = math.floor(len(distance)/3)
+    pyplot.semilogy(distance, height, 'b.', label='pełne dane')
+    if plot_function:
+        pyplot.semilogy(distance, interpolated_height, color='green', label='funkcja interpolująca')
+    pyplot.semilogy(train_distance, train_height, 'r.', label='dane do interpolacji')
 
-    if log_scale:
-        pyplot.semilogy(distance, height, 'r.', label='pełne dane')
-        pyplot.semilogy(distance, interpolated_height, color='blue', label='funkcja interpolująca')
-        pyplot.semilogy(train_distance, train_height, 'g.', label='dane do interpolacji')
-    else:
-        pyplot.plot(distance[n:2*n], height[n:2*n], 'r.', label='pełne dane')
-        pyplot.plot(distance[n:2*n], interpolated_height[n:2*n], color='blue', label='funkcja interpolująca')
-        pyplot.plot(train_distance[n:2*n], train_height[n:2*n], 'g.', label='dane do interpolacji')
     pyplot.legend()
     pyplot.ylabel('Wysokość')
     pyplot.xlabel('Odległość')
-    pyplot.title('Przybliżenie interpolacją Lagrange\'a, ' + str(len(interpolation_data)) + ' punkty(ów)')
+    pyplot.title('Przybliżenie interpolacją Lagrange\'a, ' + str(len(interpolation_data)) + ' punktow')
     pyplot.suptitle(path)
     pyplot.grid()
     if save:
         filename = path.split('/').pop()
         filename.replace(".txt", "")
-        filename += "-log" if log_scale else ""
-        pyplot.savefig(f"charts/{filename.replace('.txt', '')}-{k}-points.png")
+        pyplot.savefig(f"charts/{filename.replace('.txt', '')}-{points}-points.png")
     pyplot.show()
