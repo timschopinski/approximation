@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def interpolate_with_spline(points, path, save=False, plot_function=True):
+def interpolate_with_spline(points, path, save=False, plot_function=True, equal_separator: bool = True):
     with open(path, 'r') as f:
         data = f.readlines()
 
@@ -33,7 +33,12 @@ def interpolate_with_spline(points, path, save=False, plot_function=True):
     b = delta / h - h * c[:-1] / 3
     d = (c[1:] - c[:-1]) / (3 * h)
 
-    interp_indices = np.linspace(0, n-1, points, dtype=int)
+    if equal_separator:
+        interp_indices = np.linspace(0, n-1, points, dtype=int)
+    else:
+        interp_indices = np.sort(np.random.choice(range(1, n-1), points-2, replace=False))
+        interp_indices = np.concatenate(([0], interp_indices, [n-1]))
+
     x_interp = distance[interp_indices]
     y_interp = np.zeros_like(x_interp)
 
@@ -52,15 +57,16 @@ def interpolate_with_spline(points, path, save=False, plot_function=True):
         plt.semilogy(x_interp, y_interp, color='green', label='funkcja interpolująca')
 
     plt.semilogy(distance[interp_indices], height[interp_indices], 'r.', label='dane do interpolacji')
-
-    plt.xlabel('Odległość')
-    plt.ylabel('Wysokość')
+    filename = path.split('/')[-1].replace('.txt', '')
+    mse = np.mean((y_interp - height[interp_indices]) ** 2)
+    print(f"Spline {filename}-{points} MSE: {mse}")
+    plt.xlabel('Odległość [m]')
+    plt.ylabel('Wysokość [m]')
     plt.title(f'Interpolacja funkcjami sklejanymi trzeciego stopnia, {len(interp_indices)} punktów')
     plt.legend()
     plt.grid()
 
     if save:
-        filename = path.split('/')[-1].replace('.txt', '')
-        plt.savefig(f'charts/{filename}-spline.png')
+        plt.savefig(f'charts/spline/{filename}-{points}-points.png')
 
     plt.show()
