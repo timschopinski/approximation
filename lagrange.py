@@ -4,9 +4,13 @@ import numpy as np
 
 
 def interpolation_function(points):
-    def f(x):
+    n = len(points)
+
+    def evaluate(x):
         result = 0
-        n = len(points)
+        first_x, last_x = points[0][0], points[-1][0]
+        if x < first_x or x > last_x:
+            return 0
         for i in range(n):
             xi, yi = points[i]
             base = 1
@@ -19,7 +23,7 @@ def interpolation_function(points):
             result += float(yi) * base
         return result
 
-    return f
+    return evaluate
 
 
 def interpolate_with_lagrange(points: int, path: str, save: bool = False, plot_function: bool = True, equal_separator: bool = True):
@@ -27,9 +31,10 @@ def interpolate_with_lagrange(points: int, path: str, save: bool = False, plot_f
         data = f.readlines()
     n = len(data)
     if equal_separator:
-        interpolation_indices = range(0, len(data), len(data) // points + 1)
+        interpolation_indices = [int(i * (n - 1) / (points - 1)) for i in range(points)]
     else:
-        interpolation_indices = [random.choice(range(1, n)) for _ in range(points)]
+        interpolation_indices = [random.choice(range(1, n - 1)) for _ in range(points - 2)]
+        interpolation_indices = [0] + sorted(interpolation_indices) + [n - 1]
     interpolation_data = [(float(data[i].split()[0]), float(data[i].split()[1])) for i in interpolation_indices]
 
     f = interpolation_function(interpolation_data)
@@ -43,18 +48,25 @@ def interpolate_with_lagrange(points: int, path: str, save: bool = False, plot_f
 
     true_height = np.array([float(y) for _, y in (line.split() for line in data)])
 
-    mse = np.mean((height - interpolated_height) ** 2)
+    # Obliczanie wysokości dla całego zakresu odległości
+    interpolated_distance = np.linspace(distance[0], distance[-1], num=1000)
+    interpolated_height = np.array([f(x) for x in interpolated_distance])
+
+    # Usuwanie punktów o zerowej wysokości z interpolowanych danych
+    mask = interpolated_height != 0
+    interpolated_distance = interpolated_distance[mask]
+    interpolated_height = interpolated_height[mask]
+
     filename = path.split('/')[-1].replace('.txt', '')
-    print(f"Lagrande {filename}-{points} MSE: {mse}")
     pyplot.semilogy(distance, height, 'b.', label='pełne dane')
     if plot_function:
-        pyplot.semilogy(distance, interpolated_height, color='green', label='funkcja interpolująca')
+        pyplot.semilogy(interpolated_distance, interpolated_height, color='green', label='funkcja interpolująca')
     pyplot.semilogy(train_distance, train_height, 'r.', label='dane do interpolacji')
 
     pyplot.legend()
     pyplot.ylabel('Wysokość [m]')
     pyplot.xlabel('Odległość [m]')
-    pyplot.title(f'Interpolacja Lagrange\'a dla {len(interpolation_data)} punktów\nMSE: {mse:.4f}')
+    pyplot.title(f'Interpolacja Lagrange\'a dla {len(interpolation_data)} punktów\n')
     pyplot.grid()
     if save:
         pyplot.savefig(f"charts/lagrange/{filename}-{points}-points.png")
